@@ -6,7 +6,7 @@ path = os.getcwd().replace('test', '', 1) #this gives us a path from which we ca
 sys.path.insert(1, path)
 import air_gym
 
-env = gym.make('air_gym:airsim-drone-v0',ip_address='130.108.129.49', control_type='continuous',step_length=1, image_shape=(192,192,3), goal=[20,20,-20])
+env = gym.make('air_gym:airsim-drone-v0',ip_address='589.452.712.59', control_type='continuous',step_length=1, image_shape=(192,192,3), goal=[20,20,-20])
 
 # env.render()
 episodes = 10
