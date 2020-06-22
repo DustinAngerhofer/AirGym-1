@@ -8,6 +8,7 @@ from gym.spaces import Tuple, Box, Discrete, MultiDiscrete
 
 from collections import OrderedDict
 
+
 class AirSimEnv(gym.Env):
     metadata = {'render.modes': ['human', 'rgb_array']}
 
@@ -15,11 +16,10 @@ class AirSimEnv(gym.Env):
         self.observation_space = spaces.Box(low=0, high=255, shape=image_shape, dtype=np.uint8)
         self._seed()
 
-
         self.viewer = None
         self.steps = 0
-        self.no_episode=0
-        self.reward_sum=0
+        self.no_episode = 0
+        self.reward_sum = 0
 
     def __del__(self):
         raise NotImplementedError()
@@ -30,7 +30,7 @@ class AirSimEnv(gym.Env):
 
     def _compute_reward(self):
         raise NotImplementedError()
-    
+
     def step(self, action):
         raise NotImplementedError()
 
@@ -42,7 +42,7 @@ class AirSimEnv(gym.Env):
 
     def render(self, mode='human'):
         img = self._get_obs()
-        if mode=='human':
+        if mode == 'human':
             from gym.envs.classic_control import rendering
             if self.viewer is None:
                 self.viewer = rendering.SimpleImageViewer()
@@ -53,14 +53,14 @@ class AirSimEnv(gym.Env):
 
 
 class AirSimDroneEnv(AirSimEnv):
-    
+
     def __init__(self, ip_address, control_type, step_length, image_shape, goal):
         super().__init__(image_shape)
 
         self.step_length = step_length
         self.control_type = control_type
         self.image_shape = image_shape
-        self.goal = airsim.Vector3r(goal[0],goal[1],goal[2])
+        self.goal = airsim.Vector3r(goal[0], goal[1], goal[2])
 
         if self.control_type is 'discrete':
             self.action_space = spaces.Discrete(7)
@@ -70,29 +70,31 @@ class AirSimDroneEnv(AirSimEnv):
             print("Must choose a control type {'discrete','continuous'}. Defaulting to discrete.")
             self.action_space = spaces.Discrete(7)
 
-        self.state = {"position":np.zeros(3), "collision":False}
+        self.state = {"position": np.zeros(3), "collision": False}
 
-        self.drone = airsim.MultirotorClient(ip = ip_address)
+        self.drone = airsim.MultirotorClient(ip=ip_address)
         self._setup_flight()
 
-        self.image_request = airsim.ImageRequest('front_center',airsim.ImageType.Scene, False, False)
+        self.image_request = airsim.ImageRequest('front_center', airsim.ImageType.Scene, False, False)
 
     def __del__(self):
         self.drone.reset()
 
     def _setup_flight(self):
+        self.drone.__init__()
+        self.drone.confirmConnection()
         self.drone.reset()
         self.drone.enableApiControl(True)
         self.drone.armDisarm(True)
-        self.drone.moveToPositionAsync(0,0,-2,2).join()
+        self.drone.moveToPositionAsync(0, 0, -2, 2).join()
 
     def _get_obs(self):
         response = self.drone.simGetImages([self.image_request])
-        image = np.reshape(np.fromstring(response[0].image_data_uint8, dtype=np.uint8),self.image_shape)
+        image = np.reshape(np.fromstring(response[0].image_data_uint8, dtype=np.uint8), self.image_shape)
         _drone_state = self.drone.getMultirotorState()
         position = _drone_state.kinematics_estimated.position.to_numpy_array()
         collision = self.drone.simGetCollisionInfo().has_collided
-        
+
         self.state["position"] = position
         self.state["collision"] = collision
 
@@ -100,7 +102,7 @@ class AirSimDroneEnv(AirSimEnv):
 
     def _compute_reward(self):
         pos = self.state["position"]
-        current_pos = airsim.Vector3r(pos[0],pos[1],pos[2])
+        current_pos = airsim.Vector3r(pos[0], pos[1], pos[2])
         if current_pos == self.goal:
             done = True
             reward = 10
@@ -114,7 +116,7 @@ class AirSimDroneEnv(AirSimEnv):
         if dist > 30:
             reward = 0
         else:
-            reward = (30-dist)*0.1
+            reward = (30 - dist) * 0.1
 
         return reward, done
 
@@ -142,7 +144,7 @@ class AirSimDroneEnv(AirSimEnv):
         new_position = self.state["position"]
         new_position[0] -= self.step_length
         return new_position
-        
+
     def right(self):
         new_position = self.state["position"]
         new_position[1] += self.step_length
@@ -167,7 +169,7 @@ class AirSimDroneEnv(AirSimEnv):
         self._do_action(action)
         obs = self._get_obs()
         reward, done = self._compute_reward()
-        
+
         return obs, reward, done, self.state
 
     def reset(self):
@@ -176,13 +178,13 @@ class AirSimDroneEnv(AirSimEnv):
 
     def actions_to_op(self, action):
         switcher = {
-            0:self.noop,
-            1:self.forward,
-            2:self.backward,
-            3:self.right,
-            4:self.left,
-            5:self.up,
-            6:self.down
+            0: self.noop,
+            1: self.forward,
+            2: self.backward,
+            3: self.right,
+            4: self.left,
+            5: self.up,
+            6: self.down
         }
 
         func = switcher.get(action, lambda: "Invalid Action!")
